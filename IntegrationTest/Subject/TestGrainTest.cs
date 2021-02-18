@@ -1,6 +1,7 @@
 using Domain.Subject;
 using Orleans;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -32,25 +33,35 @@ namespace IntegrationTest.Subject
         [Fact]
         public async Task TestCancel_WhenQueued()
         {
-            GrainCancellationTokenSource cts1 = new GrainCancellationTokenSource();
-            GrainCancellationTokenSource cts2 = new GrainCancellationTokenSource();
             ITestGrain grain = _clusterClient.GetGrain<ITestGrain>(123);
 
-            // Start a running task. Don't cancel this one
-            var runningTask = Task.Run(() => grain.LongOperation(cts1.Token, TimeSpan.FromSeconds(5)));
+            var tasks = Enumerable.Range(0, 5).Select(i => RunWaitCancel(grain));
 
-            // Let running task run seccond with backpressure
-            await Task.WhenAny(runningTask, Task.Delay(TimeSpan.FromMilliseconds(100)));
+            var exs = await Task.WhenAll(tasks);
 
-            // Queue a task. This is the one to cancel
-            var queuedTask = Task.Run(() => grain.LongOperation(cts2.Token, TimeSpan.FromSeconds(5)));
+            Assert.All(exs, ex => Assert.NotNull(ex));
+        }
 
-            // Let both tasks run seccond with backpressure
-            await Task.WhenAny(runningTask, queuedTask, Task.Delay(TimeSpan.FromMilliseconds(100)));
+        private async Task<TaskCanceledException> RunWaitCancel(ITestGrain grain)
+        {
+            try
+            {
+                GrainCancellationTokenSource cts = new GrainCancellationTokenSource();
+                var task = grain.LongOperation(cts.Token, TimeSpan.FromMilliseconds(200));
 
-            await cts2.Cancel();
+                // Let running task run seccond with backpressure
+                await Task.WhenAny(task, Task.Delay(TimeSpan.FromMilliseconds(100)));
 
-            await Task.WhenAny( runningTask, Assert.ThrowsAsync<TaskCanceledException>(() => queuedTask) );
+                await cts.Cancel();
+
+                await task;
+
+                return null;
+            }
+            catch( TaskCanceledException ex )
+            {
+                return ex;
+            }
         }
     }
 }
