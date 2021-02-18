@@ -35,6 +35,12 @@ namespace IntegrationTest.Subject
         {
             ITestGrain grain = _clusterClient.GetGrain<ITestGrain>(123);
 
+            // start the grain up just to make a cleaner test
+            using (var cts = new GrainCancellationTokenSource())
+            {
+                await grain.LongOperation(cts.Token, TimeSpan.FromMilliseconds(1));
+            }
+
             var tasks = Enumerable.Range(0, 5).Select(i => RunWaitCancel(grain));
 
             var exs = await Task.WhenAll(tasks);
@@ -46,10 +52,10 @@ namespace IntegrationTest.Subject
         {
             try
             {
-                GrainCancellationTokenSource cts = new GrainCancellationTokenSource();
+                using var cts = new GrainCancellationTokenSource();
                 var task = grain.LongOperation(cts.Token, TimeSpan.FromMilliseconds(200));
 
-                // Let running task run seccond with backpressure
+                // Let running task run for a bit with backpressure
                 await Task.WhenAny(task, Task.Delay(TimeSpan.FromMilliseconds(100)));
 
                 await cts.Cancel();
