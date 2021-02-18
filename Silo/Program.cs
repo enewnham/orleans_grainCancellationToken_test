@@ -33,6 +33,7 @@ namespace Silo
                 })
                 .ConfigureLogging(builder =>
                 {
+                    builder.AddFile("silo.txt");
                     builder.AddConsole();
                 });
     }
