@@ -43,31 +43,26 @@ namespace IntegrationTest.Subject
 
             var tasks = Enumerable.Range(0, 5).Select(i => RunWaitCancel(grain));
 
-            var exs = await Task.WhenAll(tasks);
-
-            Assert.All(exs, ex => Assert.NotNull(ex));
+            await Task.WhenAll(tasks);
         }
 
-        private async Task<TaskCanceledException> RunWaitCancel(ITestGrain grain)
+        private async Task RunWaitCancel(ITestGrain grain)
         {
+            using var tcs = new GrainCancellationTokenSource();
+            var task = grain.LongOperation(tcs.Token, TimeSpan.FromMilliseconds(200));
+
+            // Let running task run for a bit with backpressure
+            await Task.WhenAny(task, Task.Delay(TimeSpan.FromMilliseconds(100)));
+
+            await tcs.Cancel();
+
             try
             {
-                using var cts = new GrainCancellationTokenSource();
-                var task = grain.LongOperation(cts.Token, TimeSpan.FromMilliseconds(200));
-
-                // Let running task run for a bit with backpressure
-                await Task.WhenAny(task, Task.Delay(TimeSpan.FromMilliseconds(100)));
-
-                await cts.Cancel();
-
                 await task;
 
-                return null;
+                Assert.True(false, "Expected TaskCancelledException, but message completed");
             }
-            catch( TaskCanceledException ex )
-            {
-                return ex;
-            }
+            catch ( TaskCanceledException ) { }
         }
     }
 }

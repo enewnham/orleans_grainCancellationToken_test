@@ -13,15 +13,13 @@ namespace Domain.Subject
         {
             _logger = logger;
         }
-        public async Task<int> LongOperation(GrainCancellationToken ct, TimeSpan delay)
+        public async Task LongOperation(GrainCancellationToken ct, TimeSpan delay)
         {
             _logger.LogInformation("Start LongOperation {delay}", delay);
 
             await Task.Delay(delay, ct.CancellationToken);
 
             _logger.LogInformation("End LongOperation");
-
-            return 1;
         }
     }
 }
