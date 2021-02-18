@@ -29,8 +29,7 @@ namespace Silo
                             options.ClusterId = "dev";
                             options.ServiceId = "HelloWorldApp";
                         })
-                        .Configure<EndpointOptions>(options => options.AdvertisedIPAddress = IPAddress.Loopback)
-                        .ConfigureApplicationParts(parts => parts.AddApplicationPart(typeof(TestGrain).Assembly).WithReferences());
+                        .Configure<EndpointOptions>(options => options.AdvertisedIPAddress = IPAddress.Loopback);
                 })
                 .ConfigureLogging(builder =>
                 {

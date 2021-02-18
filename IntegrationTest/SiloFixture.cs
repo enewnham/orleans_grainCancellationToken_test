@@ -23,8 +23,7 @@ namespace IntegrationTest
             IClientBuilder clientBuilder = new ClientBuilder();
 
             clientBuilder = clientBuilder
-                .UseLocalhostClustering()
-                .ConfigureApplicationParts(parts => parts.AddApplicationPart(typeof(TestGrain).Assembly).WithReferences());
+                .UseLocalhostClustering();
 
             IClusterClient client = clientBuilder.Build();
             await client.Connect();
